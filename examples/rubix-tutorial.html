@@ -1,0 +1,80 @@
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Static Notebook</title>
+</head>
+<body>
+<p><b>Note</b></p>
+<p>This code from <a href="https://docs.rubixml.com/1.0/basic-introduction.html">https://docs.rubixml.com/1.0/basic-introduction.html</a></p>
+<p>RubixML already installed in system through:</p>
+<pre>composer require rubix/ml
+</pre>
+<h2>Cell 3 <form method="post"><input type="hidden" name="src" value="3"><input type="submit" value="Copy"></form></h2>
+<pre>include __DIR__ . '/vendor/autoload.php';</pre>
+<br>Output:<br>
+<h1>Training</h1>
+<h2>Cell 5 <form method="post"><input type="hidden" name="src" value="5"><input type="submit" value="Copy"></form></h2>
+<pre>$samples = [
+    [3, 4, 50.5],
+    [1, 5, 24.7],
+    [4, 4, 62.0],
+    [3, 2, 31.1],
+];
+
+$labels = ['married', 'divorced', 'married', 'divorced'];</pre>
+<br>Output:<br>
+<h2>Cell 6 <form method="post"><input type="hidden" name="src" value="6"><input type="submit" value="Copy"></form></h2>
+<pre>$dataset = new Rubix\ML\Datasets\Labeled($samples, $labels);</pre>
+<br>Output:<br>
+<h2>Cell 7 <form method="post"><input type="hidden" name="src" value="7"><input type="submit" value="Copy"></form></h2>
+<pre>$estimator = new Rubix\ML\Classifiers\KNearestNeighbors(3);</pre>
+<br>Output:<br>
+<h2>Cell 8 <form method="post"><input type="hidden" name="src" value="8"><input type="submit" value="Copy"></form></h2>
+<pre>$estimator-&gt;train($dataset);</pre>
+<br>Output:<br>
+<h2>Cell 9 <form method="post"><input type="hidden" name="src" value="9"><input type="submit" value="Copy"></form></h2>
+<pre>var_dump($estimator-&gt;trained());</pre>
+<br>Output:<br>
+bool(true)
+<h2>Cell 10 <form method="post"><input type="hidden" name="src" value="10"><input type="submit" value="Copy"></form></h2>
+<pre>$samples = [
+    [4, 3, 44.2],
+    [2, 2, 16.7],
+    [2, 4, 19.5],
+    [3, 3, 55.0],
+];
+
+$dataset = new Rubix\ML\Datasets\Unlabeled($samples);
+
+$predictions = $estimator-&gt;predict($dataset);
+
+print_r($predictions);
+</pre>
+<br>Output:<br>
+Array
+(
+    [0] =&gt; married
+    [1] =&gt; divorced
+    [2] =&gt; divorced
+    [3] =&gt; married
+)
+<h2 id="newcell">New Cell</h2>
+<form method="post">
+<textarea name="cell" rows="10" cols="120"></textarea>
+<p>
+  <label for="celltype">Cell type:</label>
+    <select name="celltype" id="celltype">
+      <option value="php">PHP</option>
+      <option value="html">HTML</option>
+    </select>
+    <input type="submit" value="Execute">
+</p>
+</form>
+<form method="post">
+<input type="hidden" name="download">
+<input type="submit" value="Download">
+</form>
+<script>
+document.getElementById("newcell").scrollIntoView(true);
+</script>
+
+
+</body></html>
