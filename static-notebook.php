@@ -25,6 +25,19 @@ $SNcellCode = [];
 
 $SNcontents = file_get_contents(__FILE__);
 $SNlines = explode("\n", $SNcontents);
+$SNheader = [];
+
+$SNinHeader = false;
+foreach($SNlines as $line) {
+    if($line == SNheaderStarts) {
+        $SNinHeader = true;
+    }elseif($line == SNheaderEnds) {
+        $SNinHeader = false;
+    }elseif($SNinHeader) {
+        $SNheader[] = $line;
+    }
+}
+
 
 if(isset($_POST['header']) || isset($_POST['cell'])) {
     $new_lines = [];
@@ -83,6 +96,9 @@ if(isset($_POST['header']) || isset($_POST['cell'])) {
 } elseif (isset($_POST['download'])) {
     header('Content-type: text/plain');
     header('Content-Disposition: attachment; filename="'.basename(__FILE__,".php").'.txt"');
+    echo '<?php'."\n";
+    echo implode("\n", $SNheader);
+    echo "\n\n";
     echo implode("\n", $SNcellCode);
     exit();
 } else {
@@ -94,15 +110,8 @@ if(isset($_POST['header']) || isset($_POST['cell'])) {
 <body>
 <h2>Header</h2>
 <?php
-    $SNinHeader = false;
-    foreach($SNlines as $line) {
-        if($line == SNheaderStarts) {
-            $SNinHeader = true;
-        }elseif($line == SNheaderEnds) {
-            $SNinHeader = false;
-        }elseif($SNinHeader) {
-            echo htmlspecialchars($line). '<br/>'."\n";
-        }
+    foreach($SNheader as $line) {
+        echo htmlspecialchars($line). '<br/>'."\n";
     }
 ?>
 <form method="post">
