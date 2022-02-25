@@ -22,7 +22,6 @@ The script will valiantly refuse to run in a webserver different from the php de
 
 Too many to list, but here are the most salient ones:
 
-* No support for "use" statements, all the classes has to be fully qualified (or you can edit the script to include use at the top as needed). This will be addressed by handling the use statements separately.
 * No error handling. If you have errors, you'll need to edit the php file by hand. This will be addressed with proper error capture and rejecting the new cell until it doesn't throw errors.
 * No caching, all the cells are executed, including any of their side effects. This will be addressed using shmop as mentioned above.
 * Many others, feel free to document it in the issue tracker.

@@ -1,6 +1,5 @@
 
 
-include __DIR__ . '/vendor/autoload.php';
 
 $samples = [
     [3, 4, 50.5],
@@ -10,18 +9,18 @@ $samples = [
 ];
 
 $labels = ['married', 'divorced', 'married', 'divorced'];
-$dataset = new Rubix\ML\Datasets\Labeled($samples, $labels);
-$estimator = new Rubix\ML\Classifiers\KNearestNeighbors(3);
+$dataset = new Labeled($samples, $labels);
+$estimator = new KNearestNeighbors(3);
 $estimator->train($dataset);
 var_dump($estimator->trained());
+
 $samples = [
     [4, 3, 44.2],
     [2, 2, 16.7],
     [2, 4, 19.5],
     [3, 3, 55.0],
 ];
-
-$dataset = new Rubix\ML\Datasets\Unlabeled($samples);
+$dataset = new Unlabeled($samples);
 
 $predictions = $estimator->predict($dataset);
 

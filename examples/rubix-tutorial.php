@@ -1,4 +1,13 @@
 <?php
+
+//SN header starts
+include __DIR__ . '/vendor/autoload.php';
+
+use Rubix\ML\Datasets\Labeled;
+use Rubix\ML\Datasets\Unlabeled;
+use Rubix\ML\Classifiers\KNearestNeighbors;
+//SN header ends
+
 header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -8,20 +17,18 @@ if(!preg_match("/^PHP.*Development Server/", $_SERVER['SERVER_SOFTWARE'])){
   exit;
 }
 
-const counterSuffix = '$SNcellCounter = ';
-const newCellLine = '//SN NEW CELL GOES HERE';
-const newCellLineText = '//SN NEW CELL TEXT GOES HERE';
+const SNcounterSuffix = '$SNcellCounter = ';
+const SNnewCellLine = '//SN NEW CELL GOES HERE';
+const SNnewCellLineText = '//SN NEW CELL TEXT GOES HERE';
+const SNheaderStarts = '//SN header starts';
+const SNheaderEnds = '//SN header ends';
 
-$SNcellCounter = 10;
+$SNcellCounter = 11;
 $SNcellCode = [];
 
 $SNcellCode[] = "";
 
 $SNcellCode[] = "";
-
-$SNcellCode[] = <<<'SNEOD'
-include __DIR__ . '/vendor/autoload.php';
-SNEOD;
 
 $SNcellCode[] = "";
 
@@ -37,11 +44,11 @@ $labels = ['married', 'divorced', 'married', 'divorced'];
 SNEOD;
 
 $SNcellCode[] = <<<'SNEOD'
-$dataset = new Rubix\ML\Datasets\Labeled($samples, $labels);
+$dataset = new Labeled($samples, $labels);
 SNEOD;
 
 $SNcellCode[] = <<<'SNEOD'
-$estimator = new Rubix\ML\Classifiers\KNearestNeighbors(3);
+$estimator = new KNearestNeighbors(3);
 SNEOD;
 
 $SNcellCode[] = <<<'SNEOD'
@@ -52,6 +59,8 @@ $SNcellCode[] = <<<'SNEOD'
 var_dump($estimator->trained());
 SNEOD;
 
+$SNcellCode[] = "";
+
 $SNcellCode[] = <<<'SNEOD'
 $samples = [
     [4, 3, 44.2],
@@ -59,56 +68,67 @@ $samples = [
     [2, 4, 19.5],
     [3, 3, 55.0],
 ];
+SNEOD;
 
-$dataset = new Rubix\ML\Datasets\Unlabeled($samples);
+$SNcellCode[] = <<<'SNEOD'
+$dataset = new Unlabeled($samples);
 
 $predictions = $estimator->predict($dataset);
 
 print_r($predictions);
-
 SNEOD;
 
 //SN NEW CELL TEXT GOES HERE
 
-if(isset($_POST['cell'])) {
-    $contents = file_get_contents(__FILE__);
-    $lines = explode("\n", $contents);
-    $new_lines = [];
+$SNcontents = file_get_contents(__FILE__);
+$SNlines = explode("\n", $SNcontents);
 
-    $cellCounter = 0;
-    $code = $_POST['cell'];
-    foreach($lines as $line) {
-        if(substr($line, 0, strlen(counterSuffix)) == counterSuffix) {
-            $cellCounter = intval(substr($line, strlen(counterSuffix)));
-            ++$cellCounter;
-            $new_lines[] = counterSuffix . "$cellCounter;";
-        }elseif($line == newCellLineText) {
-            if($_POST['celltype'] == 'html') {
-                $new_lines[] = '$SNcellCode[] = "";';
-            }else{
-                $new_lines[] = '$SNcellCode[] = <<<' . "'SNEOD'";
+if(isset($_POST['header']) || isset($_POST['cell'])) {
+    $new_lines = [];
+    if(isset($_POST['header'])) {
+        $code = $_POST['header'];
+        foreach($SNlines as $line) {
+            if($line == SNheaderEnds) {
                 $new_lines[] = $code;
-                $new_lines[] = "SNEOD;";
             }
-            $new_lines[] = "";
-            $new_lines[] = newCellLineText;
-        }elseif($line == newCellLine) {
-            $new_lines[] = '?>';
-            if($_POST['celltype'] == 'html') {
-                $new_lines[] = $code;
-            }else{
-                $new_lines[] = "<h2>Cell $cellCounter <form method=post><input type=hidden name=src value=$cellCounter><input type=submit value=Copy></form></h2>";
-                $new_lines[] = "<pre>".htmlspecialchars($code)."</pre>";
-                $new_lines[] = "<br>Output:<br>";
-                $new_lines[] = "<?php";
-                $new_lines[] = $code;
-                $new_lines[] = '?>';
-            }
-            $new_lines[] = '<?php';
-            $new_lines[] = '';
-            $new_lines[] = newCellLine;
-        } else {
             $new_lines[] = $line;
+        }
+    }else{
+        $cellCounter = 0;
+        $code = $_POST['cell'];
+        foreach($SNlines as $line) {
+            if(substr($line, 0, strlen(SNcounterSuffix)) == SNcounterSuffix) {
+                $cellCounter = intval(substr($line, strlen(SNcounterSuffix)));
+                ++$cellCounter;
+                $new_lines[] = SNcounterSuffix . "$cellCounter;";
+            }elseif($line == SNnewCellLineText) {
+                if($_POST['celltype'] == 'html') {
+                    $new_lines[] = '$SNcellCode[] = "";';
+                }else{
+                    $new_lines[] = '$SNcellCode[] = <<<' . "'SNEOD'";
+                    $new_lines[] = $code;
+                    $new_lines[] = "SNEOD;";
+                }
+                $new_lines[] = "";
+                $new_lines[] = SNnewCellLineText;
+            }elseif($line == SNnewCellLine) {
+                $new_lines[] = '?>';
+                if($_POST['celltype'] == 'html') {
+                    $new_lines[] = $code;
+                }else{
+                    $new_lines[] = "<h2>Cell $cellCounter <form method=post><input type=hidden name=src value=$cellCounter><input type=submit value=Copy></form></h2>";
+                    $new_lines[] = "<pre>".htmlspecialchars($code)."</pre>";
+                    $new_lines[] = "<br>Output:<br>";
+                    $new_lines[] = "<?php";
+                    $new_lines[] = $code;
+                    $new_lines[] = '?>';
+                }
+                $new_lines[] = '<?php';
+                $new_lines[] = '';
+                $new_lines[] = SNnewCellLine;
+            } else {
+                $new_lines[] = $line;
+            }
         }
     }
 
@@ -126,14 +146,34 @@ if(isset($_POST['cell'])) {
 ?>    
 <html>
 <head>
-<title>Static Notebook</title>
+<title><?php echo basename(__FILE__,".php"); ?></title>
 </head>
 <body>
+<h2>Header</h2>
 <?php
+    $SNinHeader = false;
+    foreach($SNlines as $line) {
+        if($line == SNheaderStarts) {
+            $SNinHeader = true;
+        }elseif($line == SNheaderEnds) {
+            $SNinHeader = false;
+        }elseif($SNinHeader) {
+            echo htmlspecialchars($line). '<br/>'."\n";
+        }
+    }
+?>
+<form method="post">
+<textarea name="header" rows="5" cols="120">
+</textarea><br/>
+<input type="submit" value="Add">
+</form>
+<?php
+    
     
 ?>
 <p><b>Note</b></p>
 <p>This code from <a href="https://docs.rubixml.com/1.0/basic-introduction.html">https://docs.rubixml.com/1.0/basic-introduction.html</a></p>
+
 <?php
 
 ?>
@@ -144,20 +184,11 @@ composer require rubix/ml
 <?php
 
 ?>
-<h2>Cell 3 <form method=post><input type=hidden name=src value=3><input type=submit value=Copy></form></h2>
-<pre>include __DIR__ . &#039;/vendor/autoload.php&#039;;</pre>
-<br>Output:<br>
-<?php
-include __DIR__ . '/vendor/autoload.php';
-?>
-<?php
-
-?>
 <h1>Training</h1>
 <?php
 
 ?>
-<h2>Cell 5 <form method=post><input type=hidden name=src value=5><input type=submit value=Copy></form></h2>
+<h2>Cell 4 <form method=post><input type=hidden name=src value=4><input type=submit value=Copy></form></h2>
 <pre>$samples = [
     [3, 4, 50.5],
     [1, 5, 24.7],
@@ -180,25 +211,25 @@ $labels = ['married', 'divorced', 'married', 'divorced'];
 <?php
 
 ?>
-<h2>Cell 6 <form method=post><input type=hidden name=src value=6><input type=submit value=Copy></form></h2>
-<pre>$dataset = new Rubix\ML\Datasets\Labeled($samples, $labels);</pre>
+<h2>Cell 5 <form method=post><input type=hidden name=src value=5><input type=submit value=Copy></form></h2>
+<pre>$dataset = new Labeled($samples, $labels);</pre>
 <br>Output:<br>
 <?php
-$dataset = new Rubix\ML\Datasets\Labeled($samples, $labels);
+$dataset = new Labeled($samples, $labels);
+?>
+<?php
+
+?>
+<h2>Cell 6 <form method=post><input type=hidden name=src value=6><input type=submit value=Copy></form></h2>
+<pre>$estimator = new KNearestNeighbors(3);</pre>
+<br>Output:<br>
+<?php
+$estimator = new KNearestNeighbors(3);
 ?>
 <?php
 
 ?>
 <h2>Cell 7 <form method=post><input type=hidden name=src value=7><input type=submit value=Copy></form></h2>
-<pre>$estimator = new Rubix\ML\Classifiers\KNearestNeighbors(3);</pre>
-<br>Output:<br>
-<?php
-$estimator = new Rubix\ML\Classifiers\KNearestNeighbors(3);
-?>
-<?php
-
-?>
-<h2>Cell 8 <form method=post><input type=hidden name=src value=8><input type=submit value=Copy></form></h2>
 <pre>$estimator-&gt;train($dataset);</pre>
 <br>Output:<br>
 <?php
@@ -207,12 +238,16 @@ $estimator->train($dataset);
 <?php
 
 ?>
-<h2>Cell 9 <form method=post><input type=hidden name=src value=9><input type=submit value=Copy></form></h2>
+<h2>Cell 8 <form method=post><input type=hidden name=src value=8><input type=submit value=Copy></form></h2>
 <pre>var_dump($estimator-&gt;trained());</pre>
 <br>Output:<br>
 <?php
 var_dump($estimator->trained());
 ?>
+<?php
+
+?>
+<h1>Executing</h1>
 <?php
 
 ?>
@@ -222,14 +257,7 @@ var_dump($estimator->trained());
     [2, 2, 16.7],
     [2, 4, 19.5],
     [3, 3, 55.0],
-];
-
-$dataset = new Rubix\ML\Datasets\Unlabeled($samples);
-
-$predictions = $estimator-&gt;predict($dataset);
-
-print_r($predictions);
-</pre>
+];</pre>
 <br>Output:<br>
 <?php
 $samples = [
@@ -238,13 +266,23 @@ $samples = [
     [2, 4, 19.5],
     [3, 3, 55.0],
 ];
+?>
+<?php
 
-$dataset = new Rubix\ML\Datasets\Unlabeled($samples);
+?>
+<h2>Cell 11 <form method=post><input type=hidden name=src value=11><input type=submit value=Copy></form></h2>
+<pre>$dataset = new Unlabeled($samples);
+
+$predictions = $estimator-&gt;predict($dataset);
+
+print_r($predictions);</pre>
+<br>Output:<br>
+<?php
+$dataset = new Unlabeled($samples);
 
 $predictions = $estimator->predict($dataset);
 
 print_r($predictions);
-
 ?>
 <?php
 

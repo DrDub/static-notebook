@@ -1,4 +1,8 @@
 <?php
+
+//SN header starts
+//SN header ends
+
 header("Cache-Control: no-store, no-cache, must-revalidate");
 header("Cache-Control: post-check=0, pre-check=0", false);
 header("Pragma: no-cache");
@@ -8,54 +12,66 @@ if(!preg_match("/^PHP.*Development Server/", $_SERVER['SERVER_SOFTWARE'])){
   exit;
 }
 
-const counterSuffix = '$SNcellCounter = ';
-const newCellLine = '//SN NEW CELL GOES HERE';
-const newCellLineText = '//SN NEW CELL TEXT GOES HERE';
+const SNcounterSuffix = '$SNcellCounter = ';
+const SNnewCellLine = '//SN NEW CELL GOES HERE';
+const SNnewCellLineText = '//SN NEW CELL TEXT GOES HERE';
+const SNheaderStarts = '//SN header starts';
+const SNheaderEnds = '//SN header ends';
 
 $SNcellCounter = 0;
 $SNcellCode = [];
 
 //SN NEW CELL TEXT GOES HERE
 
-if(isset($_POST['cell'])) {
-    $contents = file_get_contents(__FILE__);
-    $lines = explode("\n", $contents);
-    $new_lines = [];
+$SNcontents = file_get_contents(__FILE__);
+$SNlines = explode("\n", $SNcontents);
 
-    $cellCounter = 0;
-    $code = $_POST['cell'];
-    foreach($lines as $line) {
-        if(substr($line, 0, strlen(counterSuffix)) == counterSuffix) {
-            $cellCounter = intval(substr($line, strlen(counterSuffix)));
-            ++$cellCounter;
-            $new_lines[] = counterSuffix . "$cellCounter;";
-        }elseif($line == newCellLineText) {
-            if($_POST['celltype'] == 'html') {
-                $new_lines[] = '$SNcellCode[] = "";';
-            }else{
-                $new_lines[] = '$SNcellCode[] = <<<' . "'SNEOD'";
+if(isset($_POST['header']) || isset($_POST['cell'])) {
+    $new_lines = [];
+    if(isset($_POST['header'])) {
+        $code = $_POST['header'];
+        foreach($SNlines as $line) {
+            if($line == SNheaderEnds) {
                 $new_lines[] = $code;
-                $new_lines[] = "SNEOD;";
             }
-            $new_lines[] = "";
-            $new_lines[] = newCellLineText;
-        }elseif($line == newCellLine) {
-            $new_lines[] = '?>';
-            if($_POST['celltype'] == 'html') {
-                $new_lines[] = $code;
-            }else{
-                $new_lines[] = "<h2>Cell $cellCounter <form method=post><input type=hidden name=src value=$cellCounter><input type=submit value=Copy></form></h2>";
-                $new_lines[] = "<pre>".htmlspecialchars($code)."</pre>";
-                $new_lines[] = "<br>Output:<br>";
-                $new_lines[] = "<?php";
-                $new_lines[] = $code;
-                $new_lines[] = '?>';
-            }
-            $new_lines[] = '<?php';
-            $new_lines[] = '';
-            $new_lines[] = newCellLine;
-        } else {
             $new_lines[] = $line;
+        }
+    }else{
+        $cellCounter = 0;
+        $code = $_POST['cell'];
+        foreach($SNlines as $line) {
+            if(substr($line, 0, strlen(SNcounterSuffix)) == SNcounterSuffix) {
+                $cellCounter = intval(substr($line, strlen(SNcounterSuffix)));
+                ++$cellCounter;
+                $new_lines[] = SNcounterSuffix . "$cellCounter;";
+            }elseif($line == SNnewCellLineText) {
+                if($_POST['celltype'] == 'html') {
+                    $new_lines[] = '$SNcellCode[] = "";';
+                }else{
+                    $new_lines[] = '$SNcellCode[] = <<<' . "'SNEOD'";
+                    $new_lines[] = $code;
+                    $new_lines[] = "SNEOD;";
+                }
+                $new_lines[] = "";
+                $new_lines[] = SNnewCellLineText;
+            }elseif($line == SNnewCellLine) {
+                $new_lines[] = '?>';
+                if($_POST['celltype'] == 'html') {
+                    $new_lines[] = $code;
+                }else{
+                    $new_lines[] = "<h2>Cell $cellCounter <form method=post><input type=hidden name=src value=$cellCounter><input type=submit value=Copy></form></h2>";
+                    $new_lines[] = "<pre>".htmlspecialchars($code)."</pre>";
+                    $new_lines[] = "<br>Output:<br>";
+                    $new_lines[] = "<?php";
+                    $new_lines[] = $code;
+                    $new_lines[] = '?>';
+                }
+                $new_lines[] = '<?php';
+                $new_lines[] = '';
+                $new_lines[] = SNnewCellLine;
+            } else {
+                $new_lines[] = $line;
+            }
         }
     }
 
@@ -76,7 +92,26 @@ if(isset($_POST['cell'])) {
 <title><?php echo basename(__FILE__,".php"); ?></title>
 </head>
 <body>
+<h2>Header</h2>
 <?php
+    $SNinHeader = false;
+    foreach($SNlines as $line) {
+        if($line == SNheaderStarts) {
+            $SNinHeader = true;
+        }elseif($line == SNheaderEnds) {
+            $SNinHeader = false;
+        }elseif($SNinHeader) {
+            echo htmlspecialchars($line). '<br/>'."\n";
+        }
+    }
+?>
+<form method="post">
+<textarea name="header" rows="5" cols="120">
+</textarea><br/>
+<input type="submit" value="Add">
+</form>
+<?php
+    
     
 //SN NEW CELL GOES HERE
 
