@@ -1,13 +1,8 @@
-<?php
 include __DIR__ . '/vendor/autoload.php';
 
 use Rubix\ML\Datasets\Labeled;
 use Rubix\ML\Datasets\Unlabeled;
 use Rubix\ML\Classifiers\KNearestNeighbors;
-
-
-
-
 $samples = [
     [3, 4, 50.5],
     [1, 5, 24.7],
@@ -16,9 +11,14 @@ $samples = [
 ];
 
 $labels = ['married', 'divorced', 'married', 'divorced'];
+
 $dataset = new Labeled($samples, $labels);
+
+
 $estimator = new KNearestNeighbors(3);
+
 $estimator->train($dataset);
+
 var_dump($estimator->trained());
 
 $samples = [
@@ -27,8 +27,10 @@ $samples = [
     [2, 4, 19.5],
     [3, 3, 55.0],
 ];
+
 $dataset = new Unlabeled($samples);
 
 $predictions = $estimator->predict($dataset);
 
 print_r($predictions);
+

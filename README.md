@@ -18,6 +18,26 @@ It currently supports two types of cells, PHP and HTML. It also has the function
 
 The script will valiantly refuse to run in a webserver different from the php development server.
 
+## Command-line functionality
+
+Each static notebook can also be executed directly, accessing the following functionality:
+
+* Export to PHP (-p), outputs the same as the "download" command.
+* Dump the generated HTML (-d), same as rendering the page and using "Save As..." from a web browser.
+* Export to Jupyter Notebooks (-x {destination ipynb}, to be used with Jupyter-PHP, see below.
+* Export to a new notebook (-u {url to upload}), to migrate to a different version
+
+### Migration
+
+If we want to migrate `old.php` notebook to new version of the script, this can be done with:
+
+```bash
+cp static-notebook.php new.php
+php -S 0.0.0.0:8085 &
+php old.php -u http://localhost:8085/new.php
+kill $!
+```
+
 ## Limitations
 
 Too many to list, but here are the most salient ones:

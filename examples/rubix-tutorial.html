@@ -5,10 +5,10 @@
 </head>
 <body>
 <h2>Header</h2>
-include __DIR__ . &#039;/vendor/autoload.php&#039;;<br/>
-<br/>
-use Rubix\ML\Datasets\Labeled;<br/>
-use Rubix\ML\Datasets\Unlabeled;<br/>
+include __DIR__ . '/vendor/autoload.php';<br/>
+<br/>
+use Rubix\ML\Datasets\Labeled;<br/>
+use Rubix\ML\Datasets\Unlabeled;<br/>
 use Rubix\ML\Classifiers\KNearestNeighbors;<br/>
 <form method="post">
 <textarea name="header" rows="5" cols="120">
@@ -18,12 +18,21 @@ use Rubix\ML\Classifiers\KNearestNeighbors;<br/>
 <p><b>Note</b></p>
 <p>This code from <a href="https://docs.rubixml.com/1.0/basic-introduction.html">https://docs.rubixml.com/1.0/basic-introduction.html</a></p>
 
-<p>RubixML already installed in system through:</p>
+<p>RubixML news to be already installed in system through:</p>
 <pre>
 composer require rubix/ml
 </pre>
+
 <h1>Training</h1>
-<h2>Cell 4 <form method=post><input type=hidden name=src value=4><input type=submit value=Copy></form></h2>
+<h2>Cell 4</h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="$samples = [
+    [3, 4, 50.5],
+    [1, 5, 24.7],
+    [4, 4, 62.0],
+    [3, 2, 31.1],
+];
+
+$labels = ['married', 'divorced', 'married', 'divorced'];"; return false;'>
 <pre>$samples = [
     [3, 4, 50.5],
     [1, 5, 24.7],
@@ -31,23 +40,35 @@ composer require rubix/ml
     [3, 2, 31.1],
 ];
 
-$labels = [&#039;married&#039;, &#039;divorced&#039;, &#039;married&#039;, &#039;divorced&#039;];</pre>
+$labels = ['married', 'divorced', 'married', 'divorced'];</pre>
 <br>Output:<br>
-<h2>Cell 5 <form method=post><input type=hidden name=src value=5><input type=submit value=Copy></form></h2>
-<pre>$dataset = new Labeled($samples, $labels);</pre>
+<h2>Cell 5</h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="$dataset = new Labeled($samples, $labels);
+"; return false;'>
+<pre>$dataset = new Labeled($samples, $labels);
+</pre>
 <br>Output:<br>
-<h2>Cell 6 <form method=post><input type=hidden name=src value=6><input type=submit value=Copy></form></h2>
+<h2>Cell 6</h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="$estimator = new KNearestNeighbors(3);"; return false;'>
 <pre>$estimator = new KNearestNeighbors(3);</pre>
 <br>Output:<br>
-<h2>Cell 7 <form method=post><input type=hidden name=src value=7><input type=submit value=Copy></form></h2>
+<h2>Cell 7</h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="$estimator-&gt;train($dataset);"; return false;'>
 <pre>$estimator-&gt;train($dataset);</pre>
 <br>Output:<br>
-<h2>Cell 8 <form method=post><input type=hidden name=src value=8><input type=submit value=Copy></form></h2>
+<h2>Cell 8</h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="var_dump($estimator-&gt;trained());"; return false;'>
 <pre>var_dump($estimator-&gt;trained());</pre>
 <br>Output:<br>
-bool(true)
+
 <h1>Executing</h1>
-<h2>Cell 10 <form method=post><input type=hidden name=src value=10><input type=submit value=Copy></form></h2>
+<h2>Cell 10</h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="$samples = [
+    [4, 3, 44.2],
+    [2, 2, 16.7],
+    [2, 4, 19.5],
+    [3, 3, 55.0],
+];"; return false;'>
 <pre>$samples = [
     [4, 3, 44.2],
     [2, 2, 16.7],
@@ -55,39 +76,17 @@ bool(true)
     [3, 3, 55.0],
 ];</pre>
 <br>Output:<br>
-<h2>Cell 11 <form method=post><input type=hidden name=src value=11><input type=submit value=Copy></form></h2>
+<h2>Cell 11</h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="$dataset = new Unlabeled($samples);
+
+$predictions = $estimator-&gt;predict($dataset);
+
+print_r($predictions);"; return false;'>
 <pre>$dataset = new Unlabeled($samples);
 
 $predictions = $estimator-&gt;predict($dataset);
 
 print_r($predictions);</pre>
 <br>Output:<br>
-Array
-(
-    [0] => married
-    [1] => divorced
-    [2] => divorced
-    [3] => married
-)
-<h2 id="newcell">New Cell</h2>
-<form method="post">
-<textarea name="cell" rows="10" cols="120">
-</textarea>
-<p>
-  <label for="celltype">Cell type:</label>
-    <select name="celltype" id="celltype">
-      <option value="php">PHP</option>
-      <option value="html">HTML</option>
-    </select>
-    <input type="submit" value="Execute">
-</p>
-</form>
-<form method="post">
-<input type="hidden" name="download">
-<input type="submit" value="Download">
-</form>
-<script>
-document.getElementById("newcell").scrollIntoView(true);
-</script>
 </body>
 </html>
