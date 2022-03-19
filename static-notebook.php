@@ -311,14 +311,14 @@ if($SNcli) {
         }
         foreach($SNcells as $cell) {
             ++$idCounter;
+            $lines = explode("\n", $cell[1]);
+            $source = [];
+            foreach($lines as $line){
+                $source[] = $line . "\n";
+            }
             if($cell[0] == SN_PHP_CELL) {
                 ++$execCounter;
-                $lines = explode("\n", $cell[1]);
-                $source = [];
-                foreach($lines as $line){
-                    $source[] = $line . "\n";
-                }
-                $outputs = [];
+                $outputs=[];
                 $outputs[] = array(
                     "data" => array( "text/html" => $cell[2] ),
                     "execution_count" => $execCounter,
@@ -344,8 +344,8 @@ if($SNcli) {
                     "source" => $source
                 );
             }elseif($cell[0] == SN_HTML_CELL) {
-                array_unshift($source, '<div>\n');
-                $source[] = '</div>\n';
+                array_unshift($source, "<div>\n");
+                $source[] = "</div>\n";
                 $cells[] = array(
                     "cell_type" => "markdown",
                     "id" => "nbid-" . $idCounter,
