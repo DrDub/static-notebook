@@ -4,7 +4,7 @@
 
 ```bash
 composer require rubix/ml
-composer require abbadon1334/gnuplot
+composer require abbadon1334/gnuplot "dev-master"
 ```
 
 ## Rubix/ML tutorial
