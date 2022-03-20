@@ -47,14 +47,14 @@ const SN_CELL_PHP_AFTER = <<<'SNEOD'
 $SNcells[$SNcellCounter - 1][] = ob_get_contents();
 ob_end_clean();
 $SNcells[$SNcellCounter - 1][] = $SNexc;
-if(!$SNcli){
+if(!$SNcli or isset($SNoptions['d'])){
   if($SNexc) {
     echo '<font color="red">';
   }
   echo $SNcells[$SNcellCounter - 1][2];
   if($SNexc) {
     echo '<br>';
-    echo $SNexc->getTraceAsString();
+    echo SN_jTraceEx($SNexc);
     echo '</font>';
   }
 }
@@ -177,6 +177,43 @@ if(getenv('TERM') && PHP_SAPI === 'cli') {
     $SNcli = true;
 }
 
+function SN_jTraceEx($e, $seen=null) {
+    $starter = $seen ? 'Caused by: ' : '';
+    $result = array();
+    if (!$seen) $seen = array();
+    $trace  = $e->getTrace();
+    $prev   = $e->getPrevious();
+    $result[] = sprintf('%s%s: %s', $starter, get_class($e), $e->getMessage());
+    $file = $e->getFile();
+    $line = $e->getLine();
+    while (true) {
+        $current = "$file:$line";
+        if (is_array($seen) && in_array($current, $seen)) {
+            $result[] = sprintf(' ... %d more', count($trace)+1);
+            break;
+        }
+        $result[] = sprintf(' at %s%s%s(%s%s%s)',
+                                    count($trace) && array_key_exists('class', $trace[0]) ? str_replace('\\', '.', $trace[0]['class']) : '',
+                                    count($trace) && array_key_exists('class', $trace[0]) && array_key_exists('function', $trace[0]) ? '.' : '',
+                                    count($trace) && array_key_exists('function', $trace[0]) ? str_replace('\\', '.', $trace[0]['function']) : '(main)',
+                                    $line === null ? $file : basename($file),
+                                    $line === null ? '' : ':',
+                                    $line === null ? '' : $line);
+        if (is_array($seen))
+            $seen[] = "$file:$line";
+        if (!count($trace))
+            break;
+        $file = array_key_exists('file', $trace[0]) ? $trace[0]['file'] : 'Unknown Source';
+        $line = array_key_exists('file', $trace[0]) && array_key_exists('line', $trace[0]) && $trace[0]['line'] ? $trace[0]['line'] : null;
+        array_shift($trace);
+    }
+    $result = join("\n<br>", $result);
+    if ($prev)
+        $result  .= "\n<br>" . SN_jTraceEx($prev, $seen);
+
+    return $result;
+}
+
 // render!
 
 if(! $SNcli) {
@@ -273,6 +310,8 @@ if(isset($_POST['header']) || isset($_POST['cell'])) { //modify source
 <title><?php echo basename(__FILE__,".php"); ?></title>
 </head>
 <body>
+<!-- sometimes chrome refuses to scroll on reloading the same page -->
+<button onclick='document.getElementById("newcell").scrollIntoView(true); return true;' id="scrollBtn" title="Go to bottom">Scroll Down</button>    
 <h2>Header</h2>
 <?php
     foreach($SNheader as $line) {
@@ -330,7 +369,7 @@ if($SNcli) {
                     $outputs[] = array(
                         "data" => array(
                             "text/html" => '<font color="red">' .
-                            implode("<br>", explode("\n", $cell[3]->getTraceAsString())) . '</font>'),
+                            SN_jTraceEx($cell[3]) . '</font>'),
                         "execution_count" => $execCounter,
                         "metadata" => new stdClass,
                         "output_type" => "execute_result"
