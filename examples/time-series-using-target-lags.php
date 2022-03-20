@@ -8,11 +8,15 @@
 include __DIR__ . '/vendor/autoload.php';
 
 use Gregwar\GnuPlot\GnuPlot;
-use Rubix\ML\Classifiers\SVR;
+use Rubix\ML\Regressors\SVR;
 use Rubix\ML\Kernels\SVM\RBF;
 use Rubix\ML\Datasets\Labeled;
 use Rubix\ML\Datasets\Unlabeled;
+use Rubix\ML\Transformers\MinMaxNormalizer;
 //SN header ends
+
+error_reporting(E_ALL);
+ini_set("display_errors", 1);
 
 const SN_COPY_STARTS      = '//SN copyright starts';
 const SN_COPY_ENDS        = '//SN copyright ends';
@@ -49,14 +53,14 @@ const SN_CELL_PHP_AFTER = <<<'SNEOD'
 $SNcells[$SNcellCounter - 1][] = ob_get_contents();
 ob_end_clean();
 $SNcells[$SNcellCounter - 1][] = $SNexc;
-if(!$SNcli){
+if(!$SNcli or isset($SNoptions['d'])){
   if($SNexc) {
     echo '<font color="red">';
   }
   echo $SNcells[$SNcellCounter - 1][2];
   if($SNexc) {
     echo '<br>';
-    echo $SNexc->getTraceAsString();
+    echo SN_jTraceEx($SNexc);
     echo '</font>';
   }
 }
@@ -179,6 +183,43 @@ if(getenv('TERM') && PHP_SAPI === 'cli') {
     $SNcli = true;
 }
 
+function SN_jTraceEx($e, $seen=null) {
+    $starter = $seen ? 'Caused by: ' : '';
+    $result = array();
+    if (!$seen) $seen = array();
+    $trace  = $e->getTrace();
+    $prev   = $e->getPrevious();
+    $result[] = sprintf('%s%s: %s', $starter, get_class($e), $e->getMessage());
+    $file = $e->getFile();
+    $line = $e->getLine();
+    while (true) {
+        $current = "$file:$line";
+        if (is_array($seen) && in_array($current, $seen)) {
+            $result[] = sprintf(' ... %d more', count($trace)+1);
+            break;
+        }
+        $result[] = sprintf(' at %s%s%s(%s%s%s)',
+                                    count($trace) && array_key_exists('class', $trace[0]) ? str_replace('\\', '.', $trace[0]['class']) : '',
+                                    count($trace) && array_key_exists('class', $trace[0]) && array_key_exists('function', $trace[0]) ? '.' : '',
+                                    count($trace) && array_key_exists('function', $trace[0]) ? str_replace('\\', '.', $trace[0]['function']) : '(main)',
+                                    $line === null ? $file : basename($file),
+                                    $line === null ? '' : ':',
+                                    $line === null ? '' : $line);
+        if (is_array($seen))
+            $seen[] = "$file:$line";
+        if (!count($trace))
+            break;
+        $file = array_key_exists('file', $trace[0]) ? $trace[0]['file'] : 'Unknown Source';
+        $line = array_key_exists('file', $trace[0]) && array_key_exists('line', $trace[0]) && $trace[0]['line'] ? $trace[0]['line'] : null;
+        array_shift($trace);
+    }
+    $result = join("\n<br>", $result);
+    if ($prev)
+        $result  .= "\n<br>" . SN_jTraceEx($prev, $seen);
+
+    return $result;
+}
+
 // render!
 
 if(! $SNcli) {
@@ -275,6 +316,8 @@ if(isset($_POST['header']) || isset($_POST['cell'])) { //modify source
 <title><?php echo basename(__FILE__,".php"); ?></title>
 </head>
 <body>
+<!-- sometimes chrome refuses to scroll on reloading the same page -->
+<button onclick='document.getElementById("newcell").scrollIntoView(true); return true;' id="scrollBtn" title="Go to bottom">Scroll Down</button>    
 <h2>Header</h2>
 <?php
     foreach($SNheader as $line) {
@@ -293,7 +336,7 @@ $SNcellCounter = 0; // reset counter for execution
 ++$SNcellCounter;
 ?>
 <p>
-This is a (partial) PHP adaptation of this <a href="https://github.com/DrDub/riiaa20_ws25_feateng_space_time/blob/master/notebooks/2_Temporal_Time_Series-from-workshop.ipynb">Python notebook presented at a workshop in RIIAA'20</a>. The notebook in turn is adapted from Chapter 7 of <a href="http://artoffeatureengineering.com/">The Art of Feature Engineering</a>. 
+This is a (partial) PHP adaptation of this <a href="https://github.com/DrDub/riiaa20_ws25_feateng_space_time/blob/master/notebooks/2_Temporal_Time_Series-from-workshop.ipynb">Python notebook presented at a workshop in RIIAA'20</a>. The notebook in turn is adapted from Chapter 7 of <a href="http://artoffeatureengineering.com/">The Art of Feature Engineering</a>. The cell numbers in the comments track back to the <a href="http://artoffeatureengineering.com/notebooks/Chapter7.html">case study</a> in that chapter.
 </p>
 <p>
 This code distributed under MIT license.
@@ -391,7 +434,7 @@ if(!$SNcli){
   echo $SNcells[$SNcellCounter - 1][2];
   if($SNexc) {
     echo '<br>';
-    echo $SNexc->getTraceAsString();
+    echo SN_jTraceEx($SNexc);
     echo '</font>';
   }
 }
@@ -425,12 +468,15 @@ file_put_contents("cell23_countries_data.tsv", implode("\n", $tsv)."\n");
 mt_srand(42);
 
 // Fisher-Yates shuffle as PHP shuffle is self-seeded
-for ($i = count($data) - 1; $i > 0; $i--) {
-  $j = mt_rand(0, $i);
-  $tmp = $data[$i];
-  $data[$i] = $data[$j];
-  $data[$j] = $tmp;
+function fy_shuffle(&$arr) {
+  for ($i = count($arr) - 1; $i > 0; $i--) {
+    $j = mt_rand(0, $i);
+    $tmp = $arr[$i];
+    $arr[$i] = $arr[$j];
+    $arr[$j] = $tmp;
+  }
 }
+fy_shuffle($data);
 $pivot = intval(count($data) * 0.8);
 $devset = array_slice($data, 0, $pivot);
 $heldout = array_slice($data, $pivot);
@@ -472,7 +518,7 @@ if(!$SNcli){
   echo $SNcells[$SNcellCounter - 1][2];
   if($SNexc) {
     echo '<br>';
-    echo $SNexc->getTraceAsString();
+    echo SN_jTraceEx($SNexc);
     echo '</font>';
   }
 }
@@ -533,7 +579,7 @@ if(!$SNcli){
   echo $SNcells[$SNcellCounter - 1][2];
   if($SNexc) {
     echo '<br>';
-    echo $SNexc->getTraceAsString();
+    echo SN_jTraceEx($SNexc);
     echo '</font>';
   }
 }
@@ -552,15 +598,31 @@ ob_start();
 $SNexc = null;
 try{
 class MyPlot extends GnuPlot {
+    protected $stub = true;
+    protected $verbose = false;
     public function __construct() {
         parent::__construct();
         $this->mode = 'points';
     }
-    protected function sendCommand($command) {
-        //echo "$command\n<br>\n";
+    public function setMode($mode) {
+        $this->mode = $mode;
+    }
+    public function setStub($stub) {
+        $this->stub = $stub;
+    }
+    public function setVerbose($verbose) {
+        $this->verbose = $verbose;
+    }
+    public function sendCommand($command): void {
+        if($this->verbose){
+            echo "$command\n<br>\n";
+        }
         parent::sendCommand($command);
     }
     public function get($format = self::TERMINAL_PNG) {
+        if($this->stub) {
+            return "";
+        }
         $this->sendInit();
         $this->sendCommand("set terminal $format size {$this->width}{$this->unit}, {$this->height}{$this->unit}");
         fflush($this->stdout);
@@ -568,12 +630,12 @@ class MyPlot extends GnuPlot {
 
         // Reading data, timeout=500ms
         $result = '';
-        $timeout = 500;
+        $timeout = 1000;
         do {
             stream_set_blocking($this->stdout, false);
             $data = fread($this->stdout, 128);
             $result .= $data;
-            usleep(10000);
+            usleep(20000);
             $timeout -= 5;
         } while ($timeout > 0 || $data);
 
@@ -581,6 +643,7 @@ class MyPlot extends GnuPlot {
     }
 }
 $plot = new MyPlot;
+$plot->setStub(false);
 
 $plot
   ->setGraphTitle('Log pop vs. log in/out rels')
@@ -616,7 +679,7 @@ if(!$SNcli){
   echo $SNcells[$SNcellCounter - 1][2];
   if($SNexc) {
     echo '<br>';
-    echo $SNexc->getTraceAsString();
+    echo SN_jTraceEx($SNexc);
     echo '</font>';
   }
 }
@@ -650,12 +713,7 @@ for($idx=0; $idx<count($devset); $idx++){
   $indices[]=$idx;
 }
 mt_srand(42);
-for ($i = count($indices) - 1; $i > 0; $i--) {
-  $j = mt_rand(0, $i);
-  $tmp = $indices[$i];
-  $indices[$i] = $indices[$j];
-  $indices[$j] = $tmp;
-}
+fy_shuffle($indices);
 $to_show=[];
 
 $years=[];
@@ -670,7 +728,7 @@ for($idx=0;$idx<12; $idx++){
   if($idx % 2 == 0) { 
     echo '<tr>';
   }
-  $plot=new MyPlot;
+  $plot->flush();
   $plot
     ->setGraphTitle($pair[0])
     ->setXLabel('year')
@@ -706,7 +764,7 @@ if(!$SNcli){
   echo $SNcells[$SNcellCounter - 1][2];
   if($SNexc) {
     echo '<br>';
-    echo $SNexc->getTraceAsString();
+    echo SN_jTraceEx($SNexc);
     echo '</font>';
   }
 }
@@ -729,6 +787,479 @@ Let us start by using only the number of relations (Cell #33) and the year.
 </p>
 <?php
 //SN cell HTML ends
+
+//SN cell PHP starts
+$SNcode = htmlspecialchars($SNcells[$SNcellCounter][1]);
+++$SNcellCounter;
+?>
+<h2>Cell <?php echo $SNcellCounter; ?></h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="<?php echo $SNcode; ?>"; return false;'>
+<pre><?php echo $SNcode; ?></pre>
+<br>Output:<br>
+<?php
+ob_start();
+$SNexc = null;
+try{
+// from CELL 33
+
+mt_srand(42);
+$train_data = [];
+$dev_data   = [];
+$test_data  = [];
+$full_header = $header;
+$header = [ $full_header[0], "log_" . $full_header[1], "log_" . $full_header[2], "year", "logpop_year" ];
+foreach($devset as $pair) {
+   $name = $pair[0];
+   $feats = $pair[1];
+   $out_rels = floatval($feats[0]);
+   $in_rels  = floatval($feats[1]);
+   if($out_rels == 0){
+     $out_rels = 1.0;
+   }
+   $isTest = (mt_rand() * 1.0 / mt_getrandmax()) < 0.2;
+   $isDev  = (mt_rand() * 1.0 / mt_getrandmax()) < 0.1;
+   // start from +10 years to accommodate lag-10 later on
+   for($year_idx = 2 + 10; $year_idx < count($feats); $year_idx++) {
+      $pop = floatval($feats[$year_idx]);
+      if(! $pop){ // missing data? skip
+         continue;
+      }
+      if(! $fields[$year_idx - 10]) { // missing lag data? skip
+         continue;
+      }
+      $row = [ [ log($out_rels, 10), log($in_rels, 10), floatval($full_header[$year_idx + 1]) ], 
+                   log($pop, 10), $name ];
+      if($isTest) {
+        $test_data[] = $row;
+      }elseif($isDev){
+        $dev_data[] = $row;
+      }else{
+        $train_data[] = $row;
+      }
+   }
+}
+echo "Train data size: " . count($train_data) . "<br>";
+echo "Dev data size: " . count($dev_data) . "<br>";
+echo "Test data size: " . count($test_data) . "<br>";
+
+$tsv=[];
+foreach($train_data as $row) {
+  $tsv[] = implode("\t", [ $row[2], implode("\t", $row[0]), $row[1] ]);
+}
+foreach($test_data as $row) {
+  $tsv[] = implode("\t", [ $row[2], implode("\t", $row[0]), $row[1] ]);
+}
+file_put_contents("cell33_feat1.tsv", implode("\n", $tsv)."\n");
+
+function keycmp($a, $b) {
+    if ($a[1] == $b[1]) {
+        return 0;
+    }
+    return ($a[1] < $b[1]) ? -1 : 1;
+}
+usort($test_data, "keycmp");
+$test_names = [];
+foreach($test_data as $row) {
+  $test_names[] = $row[2];
+}
+}catch(Throwable $e){
+   $SNexc = $e;
+}
+$SNcells[$SNcellCounter - 1][] = ob_get_contents();
+ob_end_clean();
+$SNcells[$SNcellCounter - 1][] = $SNexc;
+if(!$SNcli){
+  if($SNexc) {
+    echo '<font color="red">';
+  }
+  echo $SNcells[$SNcellCounter - 1][2];
+  if($SNexc) {
+    echo '<br>';
+    echo SN_jTraceEx($SNexc);
+    echo '</font>';
+  }
+}
+//SN cell PHP ends
+
+//SN cell PHP starts
+$SNcode = htmlspecialchars($SNcells[$SNcellCounter][1]);
+++$SNcellCounter;
+?>
+<h2>Cell <?php echo $SNcellCounter; ?></h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="<?php echo $SNcode; ?>"; return false;'>
+<pre><?php echo $SNcode; ?></pre>
+<br>Output:<br>
+<?php
+ob_start();
+$SNexc = null;
+try{
+$xtrain = []; $ytrain = [];
+$xdev   = []; $ydev   = [];
+$xtest  = []; $ytest  = [];
+foreach($train_data as $row){
+  $xtrain[] = $row[0]; $ytrain[] = $row[1];
+}
+foreach($dev_data as $row){
+  $xdev[] = $row[0]; $ydev[] = $row[1];
+}
+foreach($test_data as $row){
+  $xtest[] = $row[0]; $ytest[] = $row[1];
+}
+$trainds = new Labeled($xtrain, $ytrain);
+$devds   = new Unlabeled($xdev);
+$testds  = new Unlabeled($xtest);
+
+
+}catch(Throwable $e){
+   $SNexc = $e;
+}
+$SNcells[$SNcellCounter - 1][] = ob_get_contents();
+ob_end_clean();
+$SNcells[$SNcellCounter - 1][] = $SNexc;
+if(!$SNcli){
+  if($SNexc) {
+    echo '<font color="red">';
+  }
+  echo $SNcells[$SNcellCounter - 1][2];
+  if($SNexc) {
+    echo '<br>';
+    echo SN_jTraceEx($SNexc);
+    echo '</font>';
+  }
+}
+//SN cell PHP ends
+
+//SN cell PHP starts
+$SNcode = htmlspecialchars($SNcells[$SNcellCounter][1]);
+++$SNcellCounter;
+?>
+<h2>Cell <?php echo $SNcellCounter; ?></h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="<?php echo $SNcode; ?>"; return false;'>
+<pre><?php echo $SNcode; ?></pre>
+<br>Output:<br>
+<?php
+ob_start();
+$SNexc = null;
+try{
+// targets need to be normalized separately
+$target_scaler = new MinMaxNormalizer(0.0, 1.0);
+
+function targetToSamples($arr) {
+  $res=[];
+  foreach($arr as $val) {
+    $res[] = [$val];
+  }
+  return $res;
+}
+function samplesToTarget($arr) {
+  $res=[];
+  foreach($arr as $vval) {
+    $res[] = $vval[0];
+  }
+  return $res;
+}          
+$ytrain_orig = $ytrain;
+$tmp = new Unlabeled(targetToSamples($ytrain));
+$target_scaler->fit($tmp);
+$tmp->apply($target_scaler); $ytrain = samplesToTarget($tmp->samples());
+
+$ydev_orig = $ydev;
+$tmp = new Unlabeled(targetToSamples($ydev));
+$tmp->apply($target_scaler); $ydev = samplesToTarget($tmp->samples());
+
+$ytest_orig = $ytest;
+$tmp = new Unlabeled(targetToSamples($ytest));
+$tmp->apply($target_scaler); $ytest = samplesToTarget($tmp->samples());
+
+$trainds = new Labeled($xtrain, $ytrain);
+
+$scaler = new MinMaxNormalizer(0.0, 1.0);
+$scaler->fit($trainds);
+echo '<br>mins: ' . print_r($scaler->minimums(), TRUE).'<br>';
+echo 'maxs: ' . print_r($scaler->maximums(), TRUE).'<br>';
+$trainds->apply($scaler);
+$devds->apply($scaler);
+echo '<br>mins: ' . print_r($scaler->minimums(), TRUE).'<br>';
+echo 'maxs: ' . print_r($scaler->maximums(), TRUE).'<br>';
+$testds->apply($scaler);
+echo '<br>mins: ' . print_r($scaler->minimums(), TRUE).'<br>';
+echo 'maxs: ' . print_r($scaler->maximums(), TRUE).'<br>';
+
+
+// just to make sure the datasets have been processed correctly in-place
+$test_scaler = new MinMaxNormalizer(0.0, 1.0);
+$test_scaler->fit($trainds);
+echo '<br>mins: ' . print_r($test_scaler->minimums(), TRUE).'<br>';
+echo 'maxs: ' . print_r($test_scaler->maximums(), TRUE).'<br>';
+
+echo '<br>Sizes:<br> &nbsp; &nbsp; Train' . print_r($trainds->shape(), TRUE) . '<br>';
+echo '&nbsp; &nbsp; Test' . print_r($testds->shape(), TRUE) . '<br>';
+echo '&nbsp; &nbsp; Dev' . print_r($devds->shape(), TRUE) . '<br>';
+                                          
+
+}catch(Throwable $e){
+   $SNexc = $e;
+}
+$SNcells[$SNcellCounter - 1][] = ob_get_contents();
+ob_end_clean();
+$SNcells[$SNcellCounter - 1][] = $SNexc;
+if(!$SNcli){
+  if($SNexc) {
+    echo '<font color="red">';
+  }
+  echo $SNcells[$SNcellCounter - 1][2];
+  if($SNexc) {
+    echo '<br>';
+    echo SN_jTraceEx($SNexc);
+    echo '</font>';
+  }
+}
+//SN cell PHP ends
+
+//SN cell PHP starts
+$SNcode = htmlspecialchars($SNcells[$SNcellCounter][1]);
+++$SNcellCounter;
+?>
+<h2>Cell <?php echo $SNcellCounter; ?></h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="<?php echo $SNcode; ?>"; return false;'>
+<pre><?php echo $SNcode; ?></pre>
+<br>Output:<br>
+<?php
+ob_start();
+$SNexc = null;
+try{
+echo "Training on " .count($xtrain) . " countries / years<br>";
+
+// hyperparameter search
+$best_c = 0.5;
+$best_epsilon = 0.5;
+
+function checkAllTheSame($arr){
+    if($arr){
+        $elem = $arr[0];
+        foreach($arr as $val){
+            if($val != $elem){
+                return;
+            }
+        }
+        echo '<b>ALL THE SAME!</b><br>';
+    }
+}
+
+$best_rmse = 1000;
+foreach([0.01, 0.1, 0.5, 1.0, 1.5, 2.0, 5.0, 10.0, 50.0, 100.0] as $c) {
+    $estimator = new SVR($c, 0.05, new RBF(1.0/$trainds->numfeatures()));
+    $estimator->train($trainds);
+    $ydev_pred = $estimator->predict($devds);
+    checkAllTheSame($ydev_pred);
+    $tmp = new Unlabeled(targetToSamples($ydev_pred));
+    $tmp->reverseApply($target_scaler);
+    $ydev_pred = samplesToTarget($tmp->samples());
+    $RMSE = 0.0;
+    $ydev_len = floatval(count($ydev));
+    for($idx=0;$idx<$ydev_len;$idx++) {
+        if($idx<5){
+            echo $ydev_pred[$idx] . " " . $ydev_orig[$idx] . "<br>";
+        }
+       $diff = ($ydev_pred[$idx] - $ydev_orig[$idx]);
+       $RMSE += $diff*$diff / $ydev_len; 
+    }
+    $RMSE = sqrt($RMSE);
+    echo "C $c RMSE $RMSE<br><br>";
+    if($RMSE < $best_rmse){
+        $best_c = $c;
+        $best_rmse = $RMSE;
+    }
+}
+
+echo "Best C $best_c best RMSE $best_rmse <br>";
+
+foreach([0.0001, 0.001, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 0.0, 1.0, 10.0, 100.0] as $epsilon) {
+    $estimator = new SVR($best_c, $epsilon, new RBF(1.0/$trainds->numfeatures()));
+    $estimator->train($trainds);
+    $ydev_pred = $estimator->predict($devds);
+    checkAllTheSame($ydev_pred);
+    $tmp = new Unlabeled(targetToSamples($ydev_pred));
+    $tmp->reverseApply($target_scaler);
+    $ydev_pred = samplesToTarget($tmp->samples());
+    $RMSE = 0.0;
+    $ydev_len = floatval(count($ydev));
+    for($idx=0;$idx<$ydev_len;$idx++) {
+        if($idx<5){
+            echo $ydev_pred[$idx] . " " . $ydev_orig[$idx] . "<br>";
+        }
+       $diff = ($ydev_pred[$idx] - $ydev_orig[$idx]);
+       $RMSE += $diff*$diff / $ydev_len; 
+    }
+    $RMSE = sqrt($RMSE);
+    echo "epsilon $epsilon RMSE $RMSE<br><br>";
+    if($RMSE < $best_rmse){
+        $best_epsilon = $epsilon;
+        $best_rmse = $RMSE;
+    }
+}
+echo "Best epsilon $best_epsilon best RMSE $best_rmse <br>";
+
+$best_c = 0.1;
+$best_epsilon = 0.001;
+
+$estimator = new SVR($best_c, $best_epsilon, new RBF(1.0/$trainds->numfeatures()));
+$estimator->train($trainds);
+$ytest_pred = $estimator->predict($testds);
+checkAllTheSame($ytest_pred);
+$tmp = new Unlabeled(targetToSamples($ytest_pred));
+$tmp->reverseApply($target_scaler);
+$ytest_pred = samplesToTarget($tmp->samples());
+$RMSE = 0.0;
+$ytest_len = floatval(count($ytest));
+for($idx=0;$idx<$ytest_len;$idx++) {
+   $diff = ($ytest_pred[$idx] - $ytest_orig[$idx]);
+   $RMSE += $diff*$diff / $ytest_len; 
+}
+$RMSE = sqrt($RMSE);
+
+echo "RMSE $RMSE<br>";
+
+}catch(Throwable $e){
+   $SNexc = $e;
+}
+$SNcells[$SNcellCounter - 1][] = ob_get_contents();
+ob_end_clean();
+$SNcells[$SNcellCounter - 1][] = $SNexc;
+if(!$SNcli or isset($SNoptions['d'])){
+  if($SNexc) {
+    echo '<font color="red">';
+  }
+  echo $SNcells[$SNcellCounter - 1][2];
+  if($SNexc) {
+    echo '<br>';
+    echo SN_jTraceEx($SNexc);
+    echo '</font>';
+  }
+}
+//SN cell PHP ends
+
+//SN cell PHP starts
+$SNcode = htmlspecialchars($SNcells[$SNcellCounter][1]);
+++$SNcellCounter;
+?>
+<h2>Cell <?php echo $SNcellCounter; ?></h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="<?php echo $SNcode; ?>"; return false;'>
+<pre><?php echo $SNcode; ?></pre>
+<br>Output:<br>
+<?php
+ob_start();
+$SNexc = null;
+try{
+
+$ydev_pred = $estimator->predict($devds);
+checkAllTheSame($ydev_pred);
+$tmp = new Unlabeled(targetToSamples($ydev_pred));
+$tmp->reverseApply($target_scaler);
+$ydev_pred = samplesToTarget($tmp->samples());
+
+$dev_analysis = [];
+$tsv = [];
+$tsv[] = $header;
+$tsv[0][] = 'pred_logpop';
+$tsv[0] = implode("\t", $tsv[0]);
+
+for($idx=0;$idx<count($ydev); $idx++) {
+  $row = $dev_data[$idx];
+  $dev_analysis[] = array( 
+    'country' =>  $row[2], 
+    'feats' => $row[0],
+    'logpop' => $row[1], 
+    'pred_logpop' => $ydev_pred[$idx]
+  ); 
+  $tsv[] = implode("\t", [ $row[2], implode("\t", $row[0]), $row[1], $ydev_pred[$idx] ]);
+}
+
+file_put_contents("cell33_dev_results.tsv", implode("\n", $tsv)."\n");
+
+}catch(Throwable $e){
+   $SNexc = $e;
+}
+$SNcells[$SNcellCounter - 1][] = ob_get_contents();
+ob_end_clean();
+$SNcells[$SNcellCounter - 1][] = $SNexc;
+if(!$SNcli or isset($SNoptions['d'])){
+  if($SNexc) {
+    echo '<font color="red">';
+  }
+  echo $SNcells[$SNcellCounter - 1][2];
+  if($SNexc) {
+    echo '<br>';
+    echo SN_jTraceEx($SNexc);
+    echo '</font>';
+  }
+}
+//SN cell PHP ends
+
+//SN cell PHP starts
+$SNcode = htmlspecialchars($SNcells[$SNcellCounter][1]);
+++$SNcellCounter;
+?>
+<h2>Cell <?php echo $SNcellCounter; ?></h2>               
+    <input type=button value=Copy onclick='document.getElementById("cell").value="<?php echo $SNcode; ?>"; return false;'>
+<pre><?php echo $SNcode; ?></pre>
+<br>Output:<br>
+<?php
+ob_start();
+$SNexc = null;
+try{
+$plot = new MyPlot;
+$plot->setStub(false);
+$plot->setMode("lines");
+$plot->setVerbose(false);
+
+$plot
+  ->setGraphTitle('Population Regression')
+  ->setYLabel('log population')
+  ->setWidth(500)
+  ->setHeight(300)
+  ->setXRange(0, count($test_data))
+  ->setYRange(0, 10);
+$plot->setTitle(0, 'predicted');
+echo count($test_data)."<br>";
+for($idx=0; $idx<count($test_data); $idx++) {
+  $plot->push($idx, $ytest_pred[$idx]);
+}
+
+$plot->setTitle(1, 'actual');
+for($idx=0; $idx<count($test_data); $idx++) {
+  $plot->push($idx, $ytest_orig[$idx], 1);
+}
+
+$plot
+  ->setLineColor(0, "rgb 'red'")
+  ->setLineColor(1, "rgb 'green'");
+
+
+//$plot->display();
+$png = $plot->get();
+$base64 = 'data:image/png;base64,' . base64_encode($png);
+
+echo "<img src='$base64'/>";
+
+}catch(Throwable $e){
+   $SNexc = $e;
+}
+$SNcells[$SNcellCounter - 1][] = ob_get_contents();
+ob_end_clean();
+$SNcells[$SNcellCounter - 1][] = $SNexc;
+if(!$SNcli or isset($SNoptions['d'])){
+  if($SNexc) {
+    echo '<font color="red">';
+  }
+  echo $SNcells[$SNcellCounter - 1][2];
+  if($SNexc) {
+    echo '<br>';
+    echo SN_jTraceEx($SNexc);
+    echo '</font>';
+  }
+}
+//SN cell PHP ends
 
 //SN NEW CELL GOES HERE
 
@@ -773,7 +1304,7 @@ if($SNcli) {
                     $outputs[] = array(
                         "data" => array(
                             "text/html" => '<font color="red">' .
-                            implode("<br>", explode("\n", $cell[3]->getTraceAsString())) . '</font>'),
+                            SN_jTraceEx($cell[3]) . '</font>'),
                         "execution_count" => $execCounter,
                         "metadata" => new stdClass,
                         "output_type" => "execute_result"
