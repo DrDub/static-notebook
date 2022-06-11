@@ -38,11 +38,21 @@ php old.php -u http://localhost:8085/new.php
 kill $!
 ```
 
+### Changelog
+
+0.2 20220610
+
+* Added parse error capture.
+
+0.1 20220213
+
+* Initial version
+
 ## Limitations
 
 Too many to list, but here are the most salient ones:
 
-* No error handling. If you have errors, you'll need to edit the php file by hand. This will be addressed with proper error capture and rejecting the new cell until it doesn't throw errors.
+* Basic error handling, it currently handles syntax errors, keeping the text available for editing until it parses. For other errors, you'll need to edit the php file by hand. This will be addressed with proper error capture and re-using the current new cell rejection code.
 * No caching, all the cells are executed, including any of their side effects. This will be addressed using shmop as mentioned above.
 * Many others, feel free to document it in the issue tracker.
 

@@ -1,6 +1,6 @@
 <?php
 
-// Static Notebook Version 0.1
+// Static Notebook Version 0.2
 
 //SN copyright starts
 /*
@@ -17,6 +17,7 @@ const SN_COPY_ENDS        = '//SN copyright ends';
 const SN_HEADER_STARTS    = '//SN header starts';
 const SN_HEADER_ENDS      = '//SN header ends';
 const SN_NEW_CELL_LINE    = '//SN NEW CELL GOES HERE';
+const SN_ERROR_CELL_LINE    = '//SN ERROR CELL GOES HERE';
 const SN_CELL_PHP_STARTS  = '//SN cell PHP starts';
 const SN_CELL_PHP_ENDS    = '//SN cell PHP ends';
 const SN_CELL_HTML_STARTS = '//SN cell HTML starts';
@@ -82,6 +83,8 @@ $SNcontents = file_get_contents(__FILE__);
 $SNlines = explode("\n", $SNcontents);
 $SNheader = [];
 $SNcells  = [];
+
+$SNinError = false;
     
 $SNinHeader = false;
 $SNinPhpCell = false;
@@ -253,6 +256,15 @@ if(isset($_POST['header']) || isset($_POST['cell'])) { //modify source
         $cellCounter = 0;
         $code = $_POST['cell'];
         $code = str_replace("\r", "", $code);
+        // test $code
+        if($_POST['celltype'] == SN_PHP_CELL) {
+            try {
+                eval( "if(false) { $code }" );
+            } catch(ParseError $p) {
+                $SNinError = $p;
+            }
+        }
+
         foreach($SNlines as $line) {
             if($line == SN_COPY_STARTS) {
                 $in_copy = true;
@@ -263,7 +275,7 @@ if(isset($_POST['header']) || isset($_POST['cell'])) { //modify source
                     $in_copy = false;
                 }
             } else {
-                if($line == SN_NEW_CELL_LINE) {
+                if(!$SNinError && $line == SN_NEW_CELL_LINE) {
                     if($_POST['celltype'] == SN_HTML_CELL) {
                         $new_lines[] = SN_CELL_HTML_STARTS;
                         $new_lines[] = SN_CELL_HTML_BEFORE;
@@ -279,6 +291,17 @@ if(isset($_POST['header']) || isset($_POST['cell'])) { //modify source
                     }
                     $new_lines[] = '';
                     $new_lines[] = SN_NEW_CELL_LINE;
+                } else if(str_ends_with($line, SN_ERROR_CELL_LINE)) {
+                    if($SNinError) {
+                        $new_lines[] = 'echo urldecode("' .
+                                     urlencode("// PARSE ERROR:\n//[" .
+                                               $SNinError->getLine() . "]: " .
+                                               $SNinError->getMessage() ."\n\n" .
+                                               $code) .'"); '
+                                     . SN_ERROR_CELL_LINE;
+                    }else{
+                        $new_lines[] = SN_ERROR_CELL_LINE;
+                    }
                 } else {
                     $new_lines[] = $line;
                 }
@@ -431,8 +454,9 @@ if($SNcli) {
 ?>
 <h2 id="newcell">New Cell</h2>
 <form method="post">
-<textarea id="cell" name="cell" rows="10" cols="120">
-</textarea>
+<textarea id="cell" name="cell" rows="10" cols="120"><?php
+//SN ERROR CELL GOES HERE
+?></textarea>
 <p>
   <label for="celltype">Cell type:</label>
     <select name="celltype" id="celltype">
