@@ -1,0 +1,25 @@
+<?php
+include __DIR__ . '/vendor/autoload.php';
+
+use Rubix\ML\Classifiers\ClassificationTree;
+use Rubix\ML\Datasets\Labeled;
+use Rubix\ML\Extractors\NDJSON;
+use Rubix\ML\Helpers\Graphviz;
+
+$dataset = Labeled::fromIterator(new NDJSON('dataset.ndjson'));
+
+
+$estimator = new ClassificationTree(10, 5, 0.001, null, null);
+$estimator->train($dataset);
+
+
+$features = file_get_contents("features.txt");
+
+$dot = $estimator->exportGraphviz(explode("\n", $features), -1);
+$png = Graphviz::dotToImage($dot, 'png');
+
+$base64 = 'data:image/png;base64,' . base64_encode($png);
+
+echo "<img src='$base64'/>";
+
+
